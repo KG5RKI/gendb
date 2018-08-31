@@ -46,6 +46,28 @@ int find (vector<_dictentry> *ent, _dictentry* nent)
     return -1;
 }
 
+int processDict (vector<_dictentry> *main, vector<_dictentry> *toadd)
+{
+    for(int i=0; i<toadd->size(); i++)
+    {
+        if (toadd->at(i).count >= 5){
+            main->push_back(toadd->at(i));
+        }
+    }
+    return -1;
+}
+
+int getDictIndex (vector<_dictentry> *main, string srch)
+{
+    for(int i=0; i<main->size(); i++)
+    {
+        if (main->at(i).entry == srch){
+            return i;
+        }
+    }
+    return -1;
+}
+
 int main(int argc, char** argv){
     
     FILE* fuserdb = fopen("user.bin", "rb");
@@ -80,9 +102,14 @@ int main(int argc, char** argv){
     vector<dictentry> statedict;
     long spacesaved=0;
 
+    printf("\r\nReading in strings, creating dictionary\r\n");
+
     for(int i=0; iter < end && (end-iter)>3; i++){
 
-        
+        if(i%5==0){
+            float progress = (((float)(iter-filebuffer) / (float)(end-filebuffer))*100.0f);
+            printf("\r%02.f", progress);
+        }
         /*if(!find_dmr(user.buffer, 0, iter, end, 200)){
             printf("Error finding next user in db\r\n");
             fgetc(stdin);
@@ -105,7 +132,7 @@ int main(int argc, char** argv){
                 delete newent;
             }else{
                 countrydict.push_back(*newent);
-                printf("\r\nCountry Add: %s", newent->entry.c_str());
+                //printf("\r\nCountry Add: %s", newent->entry.c_str());
 
             }
         }
@@ -137,7 +164,7 @@ int main(int argc, char** argv){
                 delete newent;
             }else{
                 placedict.push_back(*newent);
-                printf("\r\nPlace Add: %s", newent->entry.c_str());
+                //printf("\r\nPlace Add: %s", newent->entry.c_str());
 
             }
         }       
@@ -153,7 +180,7 @@ int main(int argc, char** argv){
                 delete newent;
             }else{
                 statedict.push_back(*newent);
-                printf("\r\nState Add: %s", newent->entry.c_str());
+                //printf("\r\nState Add: %s", newent->entry.c_str());
 
             }
         }                
@@ -166,15 +193,106 @@ int main(int argc, char** argv){
     //for(int i=0; i<dict.size(); i++){
         //printf("\r\n%s - %d", dict.at(i).entry.c_str(), dict.at(i).count);
     //}
+    vector<dictentry> finaldict;
+    printf("\r\nProcessing dicts to main dict");
 
-/*
-    if(usr_find_by_dmrid(&user, id, filebuffer) != 1){
-        printf("Error finding dmr id %d\r\n", id);
-        fgetc(stdin);
-        exit(1);
+    printf("\r\nCountries..");
+    processDict(&finaldict, &countrydict);
+    countrydict.empty();
+    printf("\r\nStates..");
+    processDict(&finaldict, &statedict);
+    statedict.empty();
+    printf("\r\nPlaces..");
+    processDict(&finaldict, &placedict);
+    placedict.empty();
+
+    printf("\r\n---------");
+    printf("\r\n Dict Size: %d", finaldict.size());
+
+
+    printf("\r\nReprocessing and replacing strings in records..");
+    iter = filebuffer;
+    char buffer[200] = {0};
+    
+    FILE* fOut = fopen("out.bin", "wb");
+
+    printf("\r\nCompiling lookup tables..");
+    
+    unsigned long tablesize = (unsigned long)finaldict.size();
+    fwrite(&tablesize, 4, 1, fOut);
+
+    unsigned long tsize = 0;
+    for(int i=0; i<finaldict.size(); i++){
+        tsize += strlen(finaldict.at(i).entry.c_str());
     }
-    printUser(&user);
-*/
+
+    printf("\r\nString table size: %d", tsize);
+
+    char* strtable = new char[tsize];
+    char* tableit = strtable;
+    for(int i=0; i<finaldict.size(); i++){
+        strcpy(tableit, finaldict.at(i).entry.c_str());
+        unsigned long pt = (unsigned long)(tableit-strtable);
+        fwrite(&pt, 4, 1, fOut);
+        tableit+=strlen(finaldict.at(i).entry.c_str());
+    }
+    printf("Writing first table..");
+    
+    fflush(fOut);
+    printf("Writing second table..");
+    for(int i=0; i<tsize; i+=16){
+        fwrite(strtable+i, ((tsize-i)>=16?16:((tsize)-i)), 1, fOut);
+    }
+    fflush(fOut);
+
+    printf("\r\nSorting and writing records..");
+
+    for(int i=0; iter < end && (end-iter)>3; i++){
+
+        
+        /*if(!find_dmr(user.buffer, 0, iter, end, 200)){
+            printf("Error finding next user in db\r\n");
+            fgetc(stdin);
+            exit(1);
+        }*/
+        memset(buffer, 0, 200);
+        memset(&user, 0, sizeof(user));
+        iter = (char*)next_line_ptr(iter);
+        readline(user.buffer, iter, 200);
+        usr_splitbuffer(&user);
+        //printUser(&user);
+        if(strlen(user.country)>0){
+            int ret = getDictIndex(&finaldict, (string)user.country);
+            if(ret>=0){
+                strcpy(user.country, "\x01\x00\x00\x00");
+                unsigned short ind = (unsigned short)ret;
+                memcpy(&user.country[1], (void*)&ind, sizeof(short));
+            }
+        }
+        if(strlen(user.place)>0){
+            int ret = getDictIndex(&finaldict, (string)user.place);
+            if(ret>=0){
+                strcpy(user.place, "\x01\x00\x00\x00");
+                unsigned short ind = (unsigned short)ret;
+                memcpy(&user.place[1], (void*)&ind, sizeof(short));
+            }
+        }
+        if(strlen(user.state)>0){
+            int ret = getDictIndex(&finaldict, (string)user.state);
+            if(ret>=0){
+                strcpy(user.state, "\x01\x00\x00\x00");
+                unsigned short ind = (unsigned short)ret;
+                memcpy(&user.state[1], (void*)&ind, sizeof(short));
+            }
+        }
+        usr_tobuffer(&user, buffer);
+        printf("\r\n%s", buffer);
+        fwrite(buffer, (int)(next_line_ptr(buffer)-buffer), 1, fOut);
+        fflush(fOut);
+    }
+    fclose(fOut);
+
+    
     free(filebuffer);
     printf("\r\nDone");
     fgetc(stdin);

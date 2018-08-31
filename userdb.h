@@ -19,3 +19,4 @@ int find_dmr(char *outstr, long dmr_search,
 void usr_splitbuffer(user_t *up);
 const char* next_line_ptr(const char* p);
 void readline(char *out, const char *in, int outsize);
+void usr_tobuffer(user_t* up, char* data);

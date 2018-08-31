@@ -200,6 +200,101 @@ void usr_splitbuffer(user_t *up)
     }
 }
 
+void usr_tobuffer(user_t* up, char* data)
+{
+    char* buf = data;
+    if(strlen(up->id)>0){
+        strcpy((char*)buf, up->id);
+        buf=buf+strlen(up->id)+1;
+        *(char*)(buf-1)=',';
+    }else{
+        buf[0]=',';
+        buf=buf+1;
+    }
+
+    if(strlen(up->callsign)>0){
+        strcpy((char*)buf, up->callsign);
+        buf=buf+strlen(up->callsign)+1;
+        *(char*)(buf-1)=',';
+    }else{
+        buf[0]=',';
+        buf=buf+1;
+    }
+
+    if(strlen(up->name)>0){
+        strcpy((char*)buf, up->name);
+        buf=buf+strlen(up->name);
+        *(char*)(buf-1)=',';
+    }else{
+        buf[0]=',';
+        buf=buf+1;
+    }
+
+    if(strlen(up->place)>0){
+        if(up->place[0]=='\x01'){
+            memcpy((char*)buf, up->place, 3);
+            buf[3]=',';
+            buf=buf+4;
+        }else{
+            strcpy((char*)buf, up->place);
+            buf=buf+strlen(up->place)+1;
+            *(char*)(buf-1)=',';
+        }
+    }else{
+        buf[0]=',';
+        buf=buf+1;
+    }
+
+    if(strlen(up->state)>0){
+        if(up->state[0]=='\x01'){
+            memcpy((char*)buf, up->state, 3);
+            buf[3]=',';
+            buf=buf+4;
+        }else{
+            strcpy((char*)buf, up->state);
+            buf=buf+strlen(up->state)+1;
+            *(char*)(buf-1)=',';
+        }
+    }else{
+        buf[0]=',';
+        buf=buf+1;
+    }
+
+    if(strlen(up->firstname)>0){
+        if(strlen(up->firstname)>0){
+            strcpy((char*)buf, up->firstname);
+            buf=buf+strlen(up->firstname)+1;
+            *(char*)(buf-1)=',';
+        }else{
+            *(char*)(buf)=',';
+            buf=buf+1;
+        }
+    }else{
+        buf[0]=',';
+        buf=buf+1;
+    }
+
+    if(strlen(up->country)>0){
+        if(up->country[0]=='\x01'){
+            memcpy((char*)buf, up->country, 3);
+            buf[3]='\\';
+            buf[4]='\n';
+            buf=buf+5;
+        }else{
+            strcpy((char*)buf, up->country);
+            buf=buf+strlen(up->country)+2;
+            *(char*)(buf-2)='\\';
+            *(char*)(buf-1)='\n';
+        }
+    }else{
+        buf[0]=',';
+        buf[1]='\\';
+        buf[2]='\n';
+        buf=buf+3;
+    }
+    
+}
+
 int usr_find_by_dmrid( user_t *up, int dmrid, char* data )
 {
     if( !find_dmr_user(up->buffer, dmrid, data, BSIZE) ) {
