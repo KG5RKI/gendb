@@ -26,7 +26,7 @@ static char * getdata(char * dest, const char *  src, int count) {
  * don't fit into out[] are truncated. out[] will always be
  * null terminated if outsize > 0.
  */
-static void readline(char *out, const char *in, int outsize)
+void readline(char *out, const char *in, int outsize)
 {
     if( outsize <= 0 ) return;
     char buff[64];
@@ -52,7 +52,7 @@ static void readline(char *out, const char *in, int outsize)
 /* searches for a newline character starting at *p and returns
  * the pointer to the character following that newline
  */
-static const char* next_line_ptr(const char* p) {
+const char* next_line_ptr(const char* p) {
     char buffer[64];
     const int blen = sizeof(buffer);
     for (;;) {
@@ -79,7 +79,7 @@ static long getfirstnumber(const char * p) {
  * number dmr_search to the output buffer outstr. The return value
  * indicates whether the DMR ID was found (1) or not (0).
  */
-static int find_dmr(char *outstr, long dmr_search,
+int find_dmr(char *outstr, long dmr_search,
                     const char *dmr_begin, const char *dmr_end,
                     int outsize)
 {
@@ -90,7 +90,7 @@ static int find_dmr(char *outstr, long dmr_search,
         if (dmr_test == dmr_end) { dmr_test = next_line_ptr(dmr_begin); }
         if (dmr_test == dmr_end) { dmr_test = dmr_begin; }
         long id = getfirstnumber(dmr_test);
-        if (id == dmr_search) {
+        if (id == dmr_search || dmr_search == 0) {
             readline(outstr, dmr_test, outsize);
             return 1;
         }
