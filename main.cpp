@@ -215,11 +215,14 @@ int main(int argc, char** argv){
     char buffer[200] = {0};
     
     FILE* fOut = fopen("out.bin", "wb");
+    char legacyblock[2] = {'0', '\n'};
+    fwrite(legacyblock, 2, 1, fOut);
 
     printf("\r\nCompiling lookup tables..");
     
     unsigned long tablesize = (unsigned long)finaldict.size();
-    fwrite(&tablesize, 4, 1, fOut);
+    unsigned long tmp = tablesize*4;
+    fwrite(&tmp, 4, 1, fOut);
 
     unsigned long tsize = 0;
     for(int i=0; i<finaldict.size(); i++){
@@ -239,6 +242,8 @@ int main(int argc, char** argv){
     printf("Writing first table..");
     
     fflush(fOut);
+    tmp=tsize*4;
+    fwrite(&tmp, 4, 1, fOut);
     printf("Writing second table..");
     for(int i=0; i<tsize; i+=16){
         fwrite(strtable+i, ((tsize-i)>=16?16:((tsize)-i)), 1, fOut);
